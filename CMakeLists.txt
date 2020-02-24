@@ -1,7 +1,11 @@
+cmake_minimum_required(VERSION 2.8)
+
+project(aidl C CXX)
+
 find_package(BISON)
 find_package(FLEX)
 
-set(CMAKE_CXX_FLAGS "-std=gnu++11 -fPIC -DPIC -Wno-unused-parameter -Wno-unused-function")
+set(CMAKE_CXX_FLAGS "-std=c++11 -g -fPIC -DPIC -Wno-unused-parameter -Wno-unused-function")
 
 bison_target(LangParser aidl_language_y.yy ${CMAKE_CURRENT_BINARY_DIR}/aidl_language_y.cpp)
 flex_target(LangScanner aidl_language_l.ll  ${CMAKE_CURRENT_BINARY_DIR}/aidl_language_l.cpp)
@@ -34,4 +38,4 @@ set(SRCS
 )
 
 add_executable(aidl-cpp ${SRCS})
-target_link_libraries(aidl-cpp binder)
+#add_executable(aidl-java ${SRCS} main_java.cpp)
