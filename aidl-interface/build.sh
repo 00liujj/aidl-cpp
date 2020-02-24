@@ -1,3 +1,4 @@
+set -ex
 
 BINDER=$HOME/Downloads/binder-linux/include/
 

@@ -31,11 +31,10 @@ set(SRCS
     type_cpp.cpp
     type_java.cpp
     type_namespace.cpp
-    main_cpp.cpp
     base/logging.cpp
     base/stringprintf.cpp
     base/strings.cpp
 )
 
-add_executable(aidl-cpp ${SRCS})
-#add_executable(aidl-java ${SRCS} main_java.cpp)
+add_executable(aidl-cpp ${SRCS} main_cpp.cpp)
+add_executable(aidl-java ${SRCS} main_java.cpp)
