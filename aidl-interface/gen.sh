@@ -1,13 +1,13 @@
 set -ex
 
-true && ( DIR=`pwd`/bin
- mkdir -p ../build
- cd ../build/
- PATH=$DIR:$PATH cmake ../
- make
+true && (
+  DIR=`pwd`/bin
+  mkdir -p ../build
+  cd ../build/
+  PATH=$DIR:$PATH cmake ../
+  make -j2
 )
 
-AIDL="LD_LIBRARY_PATH=. ./aidl-cpp" 
 AIDL="../build/aidl-cpp" 
 
 mkdir -p code
