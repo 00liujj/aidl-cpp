@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 2.8)
 project(aidl_proto C CXX)
 
 file(GLOB SRC_FILES
+  src/*.cpp
   code/coco/*.cpp
-  code/coco/*.h
 )
 
 set(binder_PATH $ENV{HOME}/workspace/hi3519a_adas_dms/thirdparty/debug/)
