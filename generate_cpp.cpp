@@ -43,23 +43,23 @@ namespace cpp {
 namespace internals {
 namespace {
 
-const char kAndroidStatusVarName[] = "_aidl_ret_status";
-const char kCodeVarName[] = "_aidl_code";
-const char kFlagsVarName[] = "_aidl_flags";
-const char kDataVarName[] = "_aidl_data";
-const char kErrorLabel[] = "_aidl_error";
-const char kImplVarName[] = "_aidl_impl";
-const char kReplyVarName[] = "_aidl_reply";
-const char kReturnVarName[] = "_aidl_return";
-const char kStatusVarName[] = "_aidl_status";
+const char kAndroidStatusVarName[] = "aidl_ret_status";
+const char kCodeVarName[] = "aidl_code";
+const char kFlagsVarName[] = "aidl_flags";
+const char kDataVarName[] = "aidl_data";
+const char kErrorLabel[] = "aidl_error";
+const char kImplVarName[] = "aidl_impl";
+const char kReplyVarName[] = "aidl_reply";
+const char kReturnVarName[] = "aidl_return";
+const char kStatusVarName[] = "aidl_status";
 const char kAndroidParcelLiteral[] = "::android::Parcel";
 const char kAndroidStatusLiteral[] = "::android::status_t";
 const char kAndroidStatusOk[] = "::android::OK";
-const char kBinderStatusLiteral[] = "::android::binder::Status";
+const char kBinderStatusLiteral[] = "::android::status_t";
 const char kIBinderHeader[] = "binder/IBinder.h";
 const char kIInterfaceHeader[] = "binder/IInterface.h";
 const char kParcelHeader[] = "binder/Parcel.h";
-const char kStatusHeader[] = "binder/Status.h";
+const char kStatusHeader[] = "utils/Errors.h";
 const char kString16Header[] = "utils/String16.h";
 const char kStrongPointerHeader[] = "utils/StrongPointer.h";
 
@@ -317,12 +317,12 @@ unique_ptr<Declaration> DefineClientTransaction(const TypeNamespace& types,
     // _aidl_ret_status = _aidl_status.readFromParcel(_aidl_reply);
     // if (_aidl_ret_status != ::android::OK) { goto error; }
     // if (!_aidl_status.isOk()) { return _aidl_ret_status; }
-    b->AddStatement(new Assignment(
-        kAndroidStatusVarName,
-        StringPrintf("%s.readFromParcel(%s)", kStatusVarName, kReplyVarName)));
-    b->AddStatement(GotoErrorOnBadStatus());
+    //b->AddStatement(new Assignment(
+    //    kAndroidStatusVarName,
+    //    StringPrintf("%s.readFromParcel(%s)", kStatusVarName, kReplyVarName)));
+    //b->AddStatement(GotoErrorOnBadStatus());
     IfStatement* exception_check = new IfStatement(
-        new LiteralExpression(StringPrintf("!%s.isOk()", kStatusVarName)));
+        new LiteralExpression(StringPrintf("%s != android::OK", kStatusVarName)));
     b->AddStatement(exception_check);
     exception_check->OnTrue()->AddLiteral(
         StringPrintf("return %s", kStatusVarName));
@@ -364,9 +364,9 @@ unique_ptr<Declaration> DefineClientTransaction(const TypeNamespace& types,
   //      response.
   // In both cases, we're free to set Status from the status_t and return.
   b->AddLiteral(StringPrintf("%s:\n", kErrorLabel), false /* no semicolon */);
-  b->AddLiteral(
-      StringPrintf("%s.setFromStatusT(%s)", kStatusVarName,
-                   kAndroidStatusVarName));
+  //b->AddLiteral(
+  //    StringPrintf("%s.setFromStatusT(%s)", kStatusVarName,
+  //                 kAndroidStatusVarName));
   b->AddLiteral(StringPrintf("return %s", kStatusVarName));
 
   return unique_ptr<Declaration>(ret.release());
@@ -440,11 +440,27 @@ bool HandleServerTransaction(const TypeNamespace& types,
     const Type* type = a->GetType().GetLanguageType<Type>();
     const string& readMethod = type->ReadFromParcelMethod();
 
+
+    printf("readMethod %s\n", readMethod.c_str());
+    if (readMethod == "readStrongBinder") {
+        string type_name = type->CppType();
+        string from ="::android::sp";
+        string::size_type p = type_name.find(from);
+        type_name.replace(p, p+from.size(), "android::interface_cast");
+        b->AddStatement(new Assignment{
+            BuildVarName(*a),
+            new MethodCall{type_name+"("+string(kDataVarName) + "." + readMethod,
+                           ")"}});
+
+
+
+    } else {
     b->AddStatement(new Assignment{
         kAndroidStatusVarName,
         new MethodCall{string(kDataVarName) + "." + readMethod,
                        "&" + BuildVarName(*a)}});
     b->AddStatement(BreakOnStatusNotOk());
+    }
   }
 
   // Call the actual method.  This is implemented by the subclass.
@@ -458,12 +474,12 @@ bool HandleServerTransaction(const TypeNamespace& types,
 
   // Write exceptions during transaction handling to parcel.
   if (!method.IsOneway()) {
-    b->AddStatement(new Assignment(
-        kAndroidStatusVarName,
-        StringPrintf("%s.writeToParcel(%s)", kStatusVarName, kReplyVarName)));
+    //b->AddStatement(new Assignment(
+    //    kAndroidStatusVarName,
+    //    StringPrintf("%s.writeToParcel(%s)", kStatusVarName, kReplyVarName)));
     b->AddStatement(BreakOnStatusNotOk());
     IfStatement* exception_check = new IfStatement(
-        new LiteralExpression(StringPrintf("!%s.isOk()", kStatusVarName)));
+        new LiteralExpression(StringPrintf("%s != android::OK", kStatusVarName)));
     b->AddStatement(exception_check);
     exception_check->OnTrue()->AddLiteral("break");
   }
@@ -543,14 +559,14 @@ unique_ptr<Document> BuildServerSource(const TypeNamespace& types,
   // If we saw a null reference, we can map that to an appropriate exception.
   IfStatement* null_check = new IfStatement(
       new LiteralExpression(string(kAndroidStatusVarName) +
-                            " == ::android::UNEXPECTED_NULL"));
+                            " == ::android::UNKNOWN_ERROR"));
   on_transact->GetStatementBlock()->AddStatement(null_check);
-  null_check->OnTrue()->AddStatement(new Assignment(
-      kAndroidStatusVarName,
-      StringPrintf("%s::fromExceptionCode(%s::EX_NULL_POINTER)"
-                   ".writeToParcel(%s)",
-                   kBinderStatusLiteral, kBinderStatusLiteral,
-                   kReplyVarName)));
+  //null_check->OnTrue()->AddStatement(new Assignment(
+  //    kAndroidStatusVarName,
+  //    StringPrintf("%s::fromExceptionCode(%s::EX_NULL_POINTER)"
+  //                 ".writeToParcel(%s)",
+  //                 kBinderStatusLiteral, kBinderStatusLiteral,
+  //                 kReplyVarName)));
 
   // Finally, the server's onTransact method just returns a status code.
   on_transact->GetStatementBlock()->AddLiteral(
@@ -737,15 +753,19 @@ bool WriteHeader(const CppOptions& options,
                  const IoDelegate& io_delegate,
                  ClassNames header_type) {
   unique_ptr<Document> header;
+  unique_ptr<Document> source;
   switch (header_type) {
     case ClassNames::INTERFACE:
       header = BuildInterfaceHeader(types, interface);
+      source = BuildInterfaceSource(types, interface);
       break;
     case ClassNames::CLIENT:
       header = BuildClientHeader(types, interface);
+      source = BuildClientSource(types, interface);
       break;
     case ClassNames::SERVER:
       header = BuildServerHeader(types, interface);
+      source = BuildServerSource(types, interface);
       break;
     default:
       LOG(FATAL) << "aidl internal error";
@@ -760,9 +780,23 @@ bool WriteHeader(const CppOptions& options,
   unique_ptr<CodeWriter> code_writer(io_delegate.GetCodeWriter(header_path));
   header->Write(code_writer.get());
 
-  const bool success = code_writer->Close();
+  bool success = code_writer->Close();
   if (!success) {
     io_delegate.RemovePath(header_path);
+  }
+
+
+  {
+      size_t pos = header_path.find(".h");
+      string source_path = header_path;
+      source_path.replace(pos, pos+2, string(".cpp"));
+      unique_ptr<CodeWriter> code_writer(io_delegate.GetCodeWriter(source_path));
+
+      source->Write(code_writer.get());
+      success = code_writer->Close();
+      if (!success) {
+          io_delegate.RemovePath(source_path);
+      }
   }
 
   return success;
@@ -817,6 +851,7 @@ bool GenerateCpp(const CppOptions& options,
     return false;
   }
 
+  if (0) {
   unique_ptr<CodeWriter> writer = io_delegate.GetCodeWriter(
       options.OutputCppFilePath());
   interface_src->Write(writer.get());
@@ -827,8 +862,9 @@ bool GenerateCpp(const CppOptions& options,
   if (!success) {
     io_delegate.RemovePath(options.OutputCppFilePath());
   }
+  }
 
-  return success;
+  return true;
 }
 
 }  // namespace cpp
