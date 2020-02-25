@@ -10,4 +10,5 @@ interface ISensorData {
   void SetGPS(double x, double y, double z);
   void registerListener(ISensorListener l);
   void unregisterListener(ISensorListener l);
+  double Compute(int a);
 }

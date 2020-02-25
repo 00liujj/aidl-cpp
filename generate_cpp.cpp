@@ -269,7 +269,7 @@ unique_ptr<Declaration> DefineClientTransaction(const TypeNamespace& types,
                              kAndroidStatusVarName,
                              kAndroidStatusOk));
   // We unconditionally return a Status object.
-  b->AddLiteral(StringPrintf("%s %s", kBinderStatusLiteral, kStatusVarName));
+  //b->AddLiteral(StringPrintf("%s %s", kBinderStatusLiteral, kStatusVarName));
 
   // Add the name of the interface we're hoping to call.
   b->AddStatement(new Assignment(
@@ -321,11 +321,11 @@ unique_ptr<Declaration> DefineClientTransaction(const TypeNamespace& types,
     //    kAndroidStatusVarName,
     //    StringPrintf("%s.readFromParcel(%s)", kStatusVarName, kReplyVarName)));
     //b->AddStatement(GotoErrorOnBadStatus());
-    IfStatement* exception_check = new IfStatement(
-        new LiteralExpression(StringPrintf("%s != android::OK", kStatusVarName)));
-    b->AddStatement(exception_check);
-    exception_check->OnTrue()->AddLiteral(
-        StringPrintf("return %s", kStatusVarName));
+    //IfStatement* exception_check = new IfStatement(
+    //    new LiteralExpression(StringPrintf("%s != android::OK", kStatusVarName)));
+    //b->AddStatement(exception_check);
+    //exception_check->OnTrue()->AddLiteral(
+    //    StringPrintf("return %s", kStatusVarName));
   }
 
   // Type checking should guarantee that nothing below emits code until "return
@@ -367,7 +367,7 @@ unique_ptr<Declaration> DefineClientTransaction(const TypeNamespace& types,
   //b->AddLiteral(
   //    StringPrintf("%s.setFromStatusT(%s)", kStatusVarName,
   //                 kAndroidStatusVarName));
-  b->AddLiteral(StringPrintf("return %s", kStatusVarName));
+  b->AddLiteral(StringPrintf("return %s", kAndroidStatusVarName));
 
   return unique_ptr<Declaration>(ret.release());
 }
@@ -464,13 +464,20 @@ bool HandleServerTransaction(const TypeNamespace& types,
   }
 
   // Call the actual method.  This is implemented by the subclass.
-  vector<unique_ptr<AstNode>> status_args;
-  status_args.emplace_back(new MethodCall(
-          method.GetName(),
-          BuildArgList(types, method, false /* not for method decl */)));
-  b->AddStatement(new Statement(new MethodCall(
-      StringPrintf("%s %s", kBinderStatusLiteral, kStatusVarName),
-      ArgList(std::move(status_args)))));
+//  vector<unique_ptr<AstNode>> status_args;
+//  status_args.emplace_back(new MethodCall(
+//          method.GetName(),
+//          BuildArgList(types, method, false /* not for method decl */)));
+//  b->AddStatement(new Statement(new MethodCall(
+//      StringPrintf("%s %s", kBinderStatusLiteral, kStatusVarName),
+//      ArgList(std::move(status_args)))));
+  b->AddStatement(new Assignment {
+                      kAndroidStatusVarName,
+                      new MethodCall(
+                                method.GetName(),
+                                BuildArgList(types, method, false /* not for method decl */))
+                  });
+
 
   // Write exceptions during transaction handling to parcel.
   if (!method.IsOneway()) {
@@ -478,10 +485,10 @@ bool HandleServerTransaction(const TypeNamespace& types,
     //    kAndroidStatusVarName,
     //    StringPrintf("%s.writeToParcel(%s)", kStatusVarName, kReplyVarName)));
     b->AddStatement(BreakOnStatusNotOk());
-    IfStatement* exception_check = new IfStatement(
-        new LiteralExpression(StringPrintf("%s != android::OK", kStatusVarName)));
-    b->AddStatement(exception_check);
-    exception_check->OnTrue()->AddLiteral("break");
+//    IfStatement* exception_check = new IfStatement(
+//        new LiteralExpression(StringPrintf("%s != android::OK", kStatusVarName)));
+//    b->AddStatement(exception_check);
+//    exception_check->OnTrue()->AddLiteral("break");
   }
 
   // If we have a return value, write it first.
@@ -557,10 +564,10 @@ unique_ptr<Document> BuildServerSource(const TypeNamespace& types,
                 kDataVarName, kReplyVarName, kFlagsVarName));
 
   // If we saw a null reference, we can map that to an appropriate exception.
-  IfStatement* null_check = new IfStatement(
-      new LiteralExpression(string(kAndroidStatusVarName) +
-                            " == ::android::UNKNOWN_ERROR"));
-  on_transact->GetStatementBlock()->AddStatement(null_check);
+  //IfStatement* null_check = new IfStatement(
+  //    new LiteralExpression(string(kAndroidStatusVarName) +
+  //                          " == ::android::UNKNOWN_ERROR"));
+  //on_transact->GetStatementBlock()->AddStatement(null_check);
   //null_check->OnTrue()->AddStatement(new Assignment(
   //    kAndroidStatusVarName,
   //    StringPrintf("%s::fromExceptionCode(%s::EX_NULL_POINTER)"
