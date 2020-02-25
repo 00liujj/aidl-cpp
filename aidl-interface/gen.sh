@@ -12,7 +12,7 @@ AIDL="../build/aidl-cpp"
 
 mkdir -p code
 
-for fn in coco/*.aidl; do
+for fn in coco/I*.aidl; do
   $AIDL -I. $fn code xxx
 done
 

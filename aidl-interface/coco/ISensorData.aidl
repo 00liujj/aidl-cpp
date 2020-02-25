@@ -4,11 +4,10 @@ package coco;
 import coco.ISensorListener;
 
 interface ISensorData {
-  float GetSpeed();
   void SetSpeed(float v);
-  //void GetGPS(double*x, double* y, double* z);
   void SetGPS(double x, double y, double z);
+  void SetAccel(float x, float y, float z);
+  void SetGyro(float x, float y, float z);
   void registerListener(ISensorListener l);
   void unregisterListener(ISensorListener l);
-  double Compute(int a);
 }

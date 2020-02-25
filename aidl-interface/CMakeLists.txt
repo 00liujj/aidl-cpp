@@ -12,7 +12,7 @@ set(binder_INCLUDES ${binder_PATH}/include/)
 set(binder_LIBRARIES ${binder_PATH}/lib/libbinder.so ${binder_PATH}/lib/libutils.so)
 
 
-include_directories(${binder_INCLUDES} code/)
+include_directories(${binder_INCLUDES} code/ .)
 
 add_definitions(-std=c++11)
 
